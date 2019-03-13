@@ -4,8 +4,9 @@ import xml.etree.ElementTree as ET
 def Diff(requirements, result):
     return (list(set(requirements) - set(result)))
 
-username = "cscsy3fd"
-password = "51meprocLt"
+
+username = "xxxxxxx"
+password = "xxxxxxx"
 
 headers = {
     'X-Requested-With':'Qualys API',
@@ -56,8 +57,7 @@ with requests.Session() as session:
         print("Missing values in Scanner Appliance: ","\n".join(Diff(scannerApplianceRequirements, scanner_list)))
 
     #Asset Tags
-    assetTags = session.post('https://qualysapi.qg3.apps.qualys.com/qps/rest/2.0/search/am/assetdataconnector/', headers={'X-Requested-With': "POSTMAN",
-    'Authorization': "Basic Y3Njc3kzZmQ6NTFtZXByb2NMdA=="})
+    assetTags = session.post('https://qualysapi.qg3.apps.qualys.com/qps/rest/2.0/search/am/assetdataconnector/', headers=headers)
 
     xml_data_at = ET.fromstring(assetTags.text)
 
@@ -66,6 +66,24 @@ with requests.Session() as session:
         asset_string = ET.tostring(profile).decode()
         asset_list = [line.strip() for line in asset_string.split()]
         print("Missing values in Asset Tags: ","\n".join(Diff(assetTagRequirements, asset_list)))
+
+    #EC2 Connectors
+    #Requires POST of XML (payload below)
+    url = "https://qualysapi.qg3.apps.qualys.com/qps/rest/2.0/search/am/assetdataconnector/"
+
+    payload = "<ServiceRequest>\n<filters>\n<Criteria field=\"activation\" operator=\"EQUALS\">VM</Criteria>\n</filters>\n</ServiceRequest>"
+    headers = {
+        'X-Requested-With': "Qualys API",
+        'Content-Type': "text/xml"
+        }
+    response = requests.request("POST", url, data=payload, headers=headers)
+    xml_data_ec = ET.fromstring(response.text)
+
+    for profile in xml_data_ec:
+        ec2ConnectRequirements = ['<type>AWS</type>']
+        ec2_string = ET.tostring(profile).decode()
+        ec2_list = [line.strip() for line in ec2_string.split()]
+        print("Missing values in EC2 Connectors: ","\n".join(Diff(ec2ConnectRequirements, ec2_list)))
 
     #Excluded Hosts
     excludedHosts = session.get('https://qualysapi.qg3.apps.qualys.com/api/2.0/fo/asset/excluded_ip/?action=list', headers=headers, data={'action':'list'})
